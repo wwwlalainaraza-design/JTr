@@ -1,0 +1,2 @@
+# JTr
+Journal de trading 
