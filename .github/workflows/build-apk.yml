@@ -4,17 +4,19 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - principal
+      - main
+      - master
 
 permissions:
   contents: read
 
 jobs:
   build:
+    name: Construire l'application Android
     runs-on: ubuntu-latest
 
     steps:
-      - name: Recuperer le code
+      - name: Récupérer les fichiers
         uses: actions/checkout@v4
 
       - name: Installer Java
@@ -28,11 +30,12 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Construire APK
+      - name: Construire l'APK
         run: gradle --no-daemon assembleDebug
 
-      - name: Recuperer APK
+      - name: Récupérer l'APK
         uses: actions/upload-artifact@v4
         with:
           name: TradeLog-APK
           path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
