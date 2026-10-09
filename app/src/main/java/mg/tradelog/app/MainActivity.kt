@@ -116,7 +116,7 @@ class MainActivity : Activity() {
     private fun label(s: String) = text(s, 14, ink, true)
     private fun input(hint: String, value: String = ""): EditText {
         return EditText(this).apply {
-            this.hint = hint; setText(value); textSize = 15f; singleLine = true
+            this.hint = hint; setText(value); textSize = 15f; setSingleLine(true)
             setPadding(12, 8, 12, 8)
             body.addView(this, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 8 })
         }
