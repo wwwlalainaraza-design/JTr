@@ -344,14 +344,32 @@ class MainActivity : Activity() {
     }
 
     private fun showStats() {
-        base("Analyse", "Statistiques du compte ${if (currentAcct == "reel") "Réel" else "Backtest"}")
+        base("Analyse détaillée", "Statistiques robustes (en R)")
         val mine = db.all().filter { it.acct == currentAcct }
         val done = mine.filter { it.result in listOf("Gain", "Perte", "Break-even") && it.r != null }
-        val wins = done.count { it.result == "Gain" }
-        val totalR = done.sumOf { it.r ?: 0.0 }
         
-        text("Trades terminés : ${done.size}", 16, ink, true)
-        text("Résultat net : ${if (totalR > 0) "+" else ""}${"%.2f".format(Locale.FRANCE, totalR)} R", 16, ink, true)
+        val n = done.size
+        val wins = done.count { it.result == "Gain" }
+        val winRate = if (n == 0) 0.0 else wins * 100.0 / n
+        val totalR = done.sumOf { it.r ?: 0.0 }
+        val grossWin = done.filter { (it.r ?: 0.0) > 0.0 }.sumOf { it.r ?: 0.0 }
+        val grossLoss = Math.abs(done.filter { (it.r ?: 0.0) < 0.0 }.sumOf { it.r ?: 0.0 })
+        val profitFactor = if (grossLoss == 0.0) if (grossWin > 0.0) Double.POSITIVE_INFINITY else 0.0 else grossWin / grossLoss
+        val expectancy = if (n == 0) 0.0 else totalR / n
+
+        text("Trades terminés : $n", 15, ink, true)
+        text("Taux de réussite : ${"%.1f".format(Locale.FRANCE, winRate)} %", 15, ink, true)
+        text("Résultat net : ${if (totalR > 0) "+" else ""}${"%.2f".format(Locale.FRANCE, totalR)} R", 16, if (totalR >= 0) 0xFF0C9A68.toInt() else 0xFFDB2F4A.toInt(), true)
+        text("Profit Factor : ${if (profitFactor == Double.POSITIVE_INFINITY) "∞" else "%.2f".format(Locale.FRANCE, profitFactor)}", 14, muted, false)
+        text("Espérance : ${"%.2f".format(Locale.FRANCE, expectancy)} R / trade", 14, muted, false)
+
+        text("Répartition par stratégie", 16, ink, true)
+        listOf("ICT", "SMC", "Price Action").forEach { st ->
+            val stDone = done.filter { it.strat == st }
+            val stR = stDone.sumOf { it.r ?: 0.0 }
+            text("• $st : ${stDone.size} trades, Net : ${"%.1f".format(Locale.FRANCE, stR)} R", 13, muted, false)
+        }
+
         button("⬇ Exporter en CSV") { exportCsv(mine) }
     }
 
