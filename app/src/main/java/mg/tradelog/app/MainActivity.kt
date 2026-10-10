@@ -7,8 +7,6 @@ import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 import android.graphics.Typeface
 import android.os.Bundle
-import android.view.Gravity
-import android.view.View
 import android.widget.*
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -16,67 +14,177 @@ import java.util.Locale
 
 data class Trade(
     val id: Long = 0,
+    val acct: String = "reel",         // "reel" ou "backtest"
+    val btPeriod: String = "",         // Période testée en backtest
     val date: String,
+    val time: String = "",
+    val tz: Int? = null,
     val asset: String,
     val session: String,
-    val direction: String,
+    val strat: String = "ICT",         // "ICT", "SMC", "PA"
+    val dir: String,
     val result: String,
     val r: Double?,
     val risk: Double?,
     val setup: String,
-    val mode: String,
-    val details: String
+    val concepts: List<String> = emptyList(),
+    val plan: Boolean = true,
+    val shots: List<String> = emptyList(),
+    val full: Boolean = false,
+    val tfEntry: String = "M15",
+    val tfHigh: String = "H4",
+    val macro: String = "Non déterminé",
+    val dxy: String = "Non vérifié",
+    val yields: String = "Non vérifiés",
+    val news: String = "Aucune annonce identifiée",
+    val newsRes: String = "Non vérifiées",
+    val mistake: String = "Aucune",
+    val note: String = ""
 )
 
 class TradeDb(ctx: android.content.Context) :
-    SQLiteOpenHelper(ctx, "tradelog.db", null, 1) {
+    SQLiteOpenHelper(ctx, "tradelog.db", null, 2) { // Version 2 pour la migration sûre
+    
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL("""CREATE TABLE trades(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            date TEXT, asset TEXT, session TEXT, direction TEXT, result TEXT,
-            r REAL, risk REAL, setup TEXT, mode TEXT, details TEXT)""")
+            acct TEXT DEFAULT 'reel',
+            bt_period TEXT DEFAULT '',
+            date TEXT,
+            time TEXT DEFAULT '',
+            tz INTEGER,
+            asset TEXT,
+            session TEXT,
+            strat TEXT DEFAULT 'ICT',
+            direction TEXT,
+            result TEXT,
+            r REAL,
+            risk REAL,
+            setup TEXT,
+            concepts TEXT DEFAULT '',
+            plan INTEGER DEFAULT 1,
+            shots TEXT DEFAULT '',
+            full INTEGER DEFAULT 0,
+            tf_entry TEXT DEFAULT 'M15',
+            tf_high TEXT DEFAULT 'H4',
+            macro TEXT DEFAULT '',
+            dxy TEXT DEFAULT '',
+            yields TEXT DEFAULT '',
+            news TEXT DEFAULT '',
+            news_res TEXT DEFAULT '',
+            mistake TEXT DEFAULT '',
+            note TEXT DEFAULT ''
+        )""")
     }
-    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+
+    override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+        if (oldVersion < 2) {
+            // Migration sûre : ajout des colonnes sans toucher aux données existantes
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN acct TEXT DEFAULT 'reel'") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN bt_period TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN time TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN tz INTEGER") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN strat TEXT DEFAULT 'ICT'") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN concepts TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN plan INTEGER DEFAULT 1") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN shots TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN full INTEGER DEFAULT 0") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN tf_entry TEXT DEFAULT 'M15'") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN tf_high TEXT DEFAULT 'H4'") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN macro TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN dxy TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN yields TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN news TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN news_res TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN mistake TEXT DEFAULT ''") } catch (e: Exception) {}
+            try { db.execSQL("ALTER TABLE trades ADD COLUMN note TEXT DEFAULT ''") } catch (e: Exception) {}
+        }
+    }
+
     fun add(t: Trade) {
         val v = ContentValues().apply {
-            put("date",t.date); put("asset",t.asset); put("session",t.session)
-            put("direction",t.direction); put("result",t.result)
-            if(t.r == null) putNull("r") else put("r",t.r)
-            if(t.risk == null) putNull("risk") else put("risk",t.risk)
-            put("setup",t.setup); put("mode",t.mode); put("details",t.details)
+            put("acct", t.acct)
+            put("bt_period", t.btPeriod)
+            put("date", t.date)
+            put("time", t.time)
+            if (t.tz == null) putNull("tz") else put("tz", t.tz)
+            put("asset", t.asset)
+            put("session", t.session)
+            put("strat", t.strat)
+            put("direction", t.dir)
+            put("result", t.result)
+            if (t.r == null) putNull("r") else put("r", t.r)
+            if (t.risk == null) putNull("risk") else put("risk", t.risk)
+            put("setup", t.setup)
+            put("concepts", t.concepts.joinToString("|"))
+            put("plan", if (t.plan) 1 else 0)
+            put("shots", t.shots.joinToString("||"))
+            put("full", if (t.full) 1 else 0)
+            put("tf_entry", t.tfEntry)
+            put("tf_high", t.tfHigh)
+            put("macro", t.macro)
+            put("dxy", t.dxy)
+            put("yields", t.yields)
+            put("news", t.news)
+            put("news_res", t.newsRes)
+            put("mistake", t.mistake)
+            put("note", t.note)
         }
         writableDatabase.insert("trades", null, v)
     }
+
     fun all(): List<Trade> {
         val out = mutableListOf<Trade>()
         readableDatabase.rawQuery("SELECT * FROM trades ORDER BY id DESC", null).use { c ->
-            while(c.moveToNext()) out.add(Trade(
-                c.getLong(c.getColumnIndexOrThrow("id")),
-                c.getString(c.getColumnIndexOrThrow("date")) ?: "",
-                c.getString(c.getColumnIndexOrThrow("asset")) ?: "XAUUSD",
-                c.getString(c.getColumnIndexOrThrow("session")) ?: "",
-                c.getString(c.getColumnIndexOrThrow("direction")) ?: "",
-                c.getString(c.getColumnIndexOrThrow("result")) ?: "",
-                if(c.isNull(c.getColumnIndexOrThrow("r"))) null else c.getDouble(c.getColumnIndexOrThrow("r")),
-                if(c.isNull(c.getColumnIndexOrThrow("risk"))) null else c.getDouble(c.getColumnIndexOrThrow("risk")),
-                c.getString(c.getColumnIndexOrThrow("setup")) ?: "",
-                c.getString(c.getColumnIndexOrThrow("mode")) ?: "",
-                c.getString(c.getColumnIndexOrThrow("details")) ?: ""
-            ))
+            while (c.moveToNext()) {
+                val conceptsStr = c.getString(c.getColumnIndexOrThrow("concepts")) ?: ""
+                val shotsStr = c.getString(c.getColumnIndexOrThrow("shots")) ?: ""
+                out.add(Trade(
+                    id = c.getLong(c.getColumnIndexOrThrow("id")),
+                    acct = c.getString(c.getColumnIndexOrThrow("acct")) ?: "reel",
+                    btPeriod = c.getString(c.getColumnIndexOrThrow("bt_period")) ?: "",
+                    date = c.getString(c.getColumnIndexOrThrow("date")) ?: "",
+                    time = c.getString(c.getColumnIndexOrThrow("time")) ?: "",
+                    tz = if (c.isNull(c.getColumnIndexOrThrow("tz"))) null else c.getInt(c.getColumnIndexOrThrow("tz")),
+                    asset = c.getString(c.getColumnIndexOrThrow("asset")) ?: "XAUUSD",
+                    session = c.getString(c.getColumnIndexOrThrow("session")) ?: "",
+                    strat = c.getString(c.getColumnIndexOrThrow("strat")) ?: "ICT",
+                    dir = c.getString(c.getColumnIndexOrThrow("direction")) ?: "",
+                    result = c.getString(c.getColumnIndexOrThrow("result")) ?: "",
+                    r = if (c.isNull(c.getColumnIndexOrThrow("r"))) null else c.getDouble(c.getColumnIndexOrThrow("r")),
+                    risk = if (c.isNull(c.getColumnIndexOrThrow("risk"))) null else c.getDouble(c.getColumnIndexOrThrow("risk")),
+                    setup = c.getString(c.getColumnIndexOrThrow("setup")) ?: "",
+                    concepts = if (conceptsStr.isEmpty()) emptyList() else conceptsStr.split("|"),
+                    plan = c.getInt(c.getColumnIndexOrThrow("plan")) == 1,
+                    shots = if (shotsStr.isEmpty()) emptyList() else shotsStr.split("||"),
+                    full = c.getInt(c.getColumnIndexOrThrow("full")) == 1,
+                    tfEntry = c.getString(c.getColumnIndexOrThrow("tf_entry")) ?: "M15",
+                    tfHigh = c.getString(c.getColumnIndexOrThrow("tf_high")) ?: "H4",
+                    macro = c.getString(c.getColumnIndexOrThrow("macro")) ?: "",
+                    dxy = c.getString(c.getColumnIndexOrThrow("dxy")) ?: "",
+                    yields = c.getString(c.getColumnIndexOrThrow("yields")) ?: "",
+                    news = c.getString(c.getColumnIndexOrThrow("news")) ?: "",
+                    newsRes = c.getString(c.getColumnIndexOrThrow("news_res")) ?: "",
+                    mistake = c.getString(c.getColumnIndexOrThrow("mistake")) ?: "",
+                    note = c.getString(c.getColumnIndexOrThrow("note")) ?: ""
+                ))
+            }
         }
         return out
     }
+
     fun delete(id: Long) { writableDatabase.delete("trades", "id=?", arrayOf(id.toString())) }
-    fun clear() { writableDatabase.delete("trades", null, null) }
+    fun clear(account: String) { writableDatabase.delete("trades", "acct=?", arrayOf(account)) }
 }
 
 class MainActivity : Activity() {
     private lateinit var db: TradeDb
     private lateinit var body: LinearLayout
-    private val blue = 0xFF1769E0.toInt()
-    private val ink = 0xFF172033.toInt()
-    private val muted = 0xFF68758A.toInt()
+    private val blue = 0xFF1D5BFF.toInt()
+    private val ink = 0xFF0B1B3A.toInt()
+    private val muted = 0xFF5B6B8C.toInt()
     private val pad = 16
+    private var currentAcct = "reel"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,16 +197,18 @@ class MainActivity : Activity() {
         body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(pad, pad, pad, 28)
-            setBackgroundColor(0xFFF4F6FA.toInt())
+            setBackgroundColor(0xFFF2F5FB.toInt())
         }
         scroll.addView(body)
         setContentView(scroll)
-        text(title, 27, ink, true)
+        text(title, 26, ink, true)
         text(subtitle, 13, muted, false)
-        val nav = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0,14,0,12) }
-        nav.addView(navButton("＋ Rapide") { showForm(false) }, weight())
-        nav.addView(navButton("🔎 Analyse") { showForm(true) }, weight())
-        nav.addView(navButton("📊 Stats") { showStats() }, weight())
+        val nav = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(0, 14, 0, 12) }
+        nav.addView(navButton("🏠 Accueil") { showHome() }, weight())
+        nav.addView(navButton("📋 Historique") { showHistory() }, weight())
+        nav.addView(navButton("＋ Nouveau") { showForm() }, weight())
+        nav.addView(navButton("📊 Analyse") { showStats() }, weight())
+        nav.addView(navButton("⚙ Réglages") { showSettings() }, weight())
         body.addView(nav)
     }
 
@@ -111,31 +221,7 @@ class MainActivity : Activity() {
         })
     }
     private fun navButton(s: String, action: () -> Unit) = Button(this).apply {
-        text = s; textSize = 11f; setOnClickListener { action() }
-    }
-    private fun label(s: String) = text(s, 14, ink, true)
-    private fun input(hint: String, value: String = ""): EditText {
-        return EditText(this).apply {
-            this.hint = hint; setText(value); textSize = 15f; setSingleLine(true)
-            setPadding(12, 8, 12, 8)
-            body.addView(this, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 8 })
-        }
-    }
-    private fun spinner(labelText: String, options: List<String>): Spinner {
-        label(labelText)
-        val sp = Spinner(this)
-        sp.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, options)
-        body.addView(sp, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = 8 })
-        return sp
-    }
-    private fun checkGroup(title: String, options: List<String>): List<CheckBox> {
-        label(title)
-        return options.map { option ->
-            CheckBox(this).apply {
-                text = option; textSize = 14f
-                body.addView(this)
-            }
-        }
+        text = s; textSize = 11.5f; setOnClickListener { action() }
     }
     private fun button(s: String, action: () -> Unit) {
         body.addView(Button(this).apply {
@@ -145,122 +231,138 @@ class MainActivity : Activity() {
     private fun today() = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
     private fun showHome() {
-        base("TradeLog", "Journal de trading hors ligne · XAUUSD")
-        text("Tes trades, tes règles, tes statistiques.", 18, ink, true)
-        text("Les données sont enregistrées dans la base locale du téléphone.", 14, muted, false)
-        button("⚡ Enregistrer un trade rapide") { showForm(false) }
-        button("🔎 Ajouter une analyse complète") { showForm(true) }
-        button("📊 Consulter l'historique et les statistiques") { showStats() }
-        text("Fonctionnalités : fondamentaux, Price Action, SMC/ICT, risque, discipline et historique.", 14, muted, false)
-        text("Importation MT5 : cette version native n'a pas encore le module CSV. Il sera ajouté dans une version suivante.", 12, muted, false)
-    }
-
-    private fun showForm(full: Boolean) {
-        base(if(full) "Analyse complète" else "Trade rapide",
-            if(full) "Fondamentaux + Price Action + SMC/ICT" else "Enregistre l'essentiel en quelques secondes")
-        label("Date (AAAA-MM-JJ)")
-        val date = input("2026-10-09", today())
-        val asset = spinner("Actif", listOf("XAUUSD","XAGUSD","EURUSD","GBPUSD","USDJPY","BTCUSD","Autre"))
-        val session = spinner("Session", listOf("Londres","New York","Londres–New York","Asie","Autre"))
-        val direction = spinner("Direction", listOf("BUY","SELL","Pas de trade"))
-        val result = spinner("Résultat", listOf("En attente","Gain","Perte","Break-even","Annulé"))
-        val r = input("Résultat en R (ex. 2 ou -1)")
-        val risk = input("Risque en % (ex. 1)")
-        val setup = spinner("Setup principal", listOf("Price action","BOS / CHOCH","Sweep de liquidité","Order block","FVG","Breakout","Pullback","Support / résistance","Autre"))
-        val detailParts = mutableListOf<String>()
-        if (full) {
-            val news = spinner("Annonce économique", listOf("Aucune annonce identifiée","CPI / Core CPI","PCE / Core PCE","NFP / chômage / salaires","FOMC / discours Fed","ISM / PMI","PIB","JOLTS","Plusieurs annonces"))
-            val actual = spinner("Données vs prévisions", listOf("Non vérifiées","Plus fortes que prévu","Plus faibles que prévu","Conformes","Contradictoires"))
-            val macro = spinner("Biais macro pour l'or", listOf("Non déterminé","Haussier","Baissier","Neutre","Signaux mixtes"))
-            val dxy = spinner("Biais DXY", listOf("Non vérifié","Haussier","Baissier","Neutre"))
-            val yields = spinner("Rendements US", listOf("Non vérifiés","En hausse","En baisse","Mixtes"))
-            val trend = spinner("Tendance supérieure", listOf("Non déterminée","Haussière","Baissière","Range"))
-            val setups = checkGroup("Price Action / SMC / ICT", listOf("BOS confirmé","CHOCH confirmé","Sweep de liquidité","Order block","FVG","Premium / discount","Support / résistance","Breakout / pullback","Biais macro aligné","Session active","Ratio R/R acceptable","Confirmation multi-timeframe"))
-            val discipline = checkGroup("Discipline", listOf("Stop-loss défini","Risque calculé avant entrée","Entrée confirmée","Pas de FOMO / revenge","Actualités vérifiées","Plan respecté"))
-            val error = spinner("Erreur éventuelle", listOf("Aucune identifiée","FOMO","Revenge trading","Entrée anticipée","Stop-loss mal placé","Risque trop élevé","Contre-tendance","Trading pendant annonce","Sortie prématurée","Plan non respecté"))
-            detailParts.add("Annonce: ${selected(news)}")
-            detailParts.add("Lecture: ${selected(actual)}")
-            detailParts.add("Biais or: ${selected(macro)}")
-            detailParts.add("DXY: ${selected(dxy)}")
-            detailParts.add("Rendements US: ${selected(yields)}")
-            detailParts.add("Tendance: ${selected(trend)}")
-            detailParts.add("Confluences: ${setups.filter{it.isChecked}.joinToString { it.text }}")
-            detailParts.add("Discipline: ${discipline.filter{it.isChecked}.joinToString { it.text }}")
-            detailParts.add("Erreur: ${selected(error)}")
-        }
-        val note = input("Note / raison / leçon (facultatif)")
-        button("💾 Enregistrer le trade") {
-            if(date.text.toString().trim().isEmpty()) { date.error = "Entre une date"; return@button }
-            db.add(Trade(
-                date=date.text.toString().trim(), asset=selected(asset), session=selected(session),
-                direction=selected(direction), result=selected(result),
-                r=r.text.toString().trim().toDoubleOrNull(),
-                risk=risk.text.toString().trim().replace(',','.').toDoubleOrNull(),
-                setup=selected(setup), mode=if(full) "Complet" else "Rapide",
-                details=(detailParts + listOf("Note: ${note.text}")).joinToString("\n")
-            ))
-            Toast.makeText(this, "Trade enregistré", Toast.LENGTH_SHORT).show()
-            showStats()
-        }
-    }
-
-    private fun selected(s: Spinner) = s.selectedItem?.toString() ?: ""
-    private fun showStats() {
-        base("Historique & statistiques", "Résumé de tes trades enregistrés")
-        val all = db.all()
-        val done = all.filter { it.result in listOf("Gain","Perte","Break-even") }
-        val wins = done.count { it.result == "Gain" }
+        base("JTr", "Journal de trading · Compte ${if (currentAcct == "reel") "Réel" else "Backtest"}")
+        val mine = db.all().filter { it.acct == currentAcct }
+        val done = mine.filter { it.result in listOf("Gain", "Perte", "Break-even") && it.r != null }
         val totalR = done.sumOf { it.r ?: 0.0 }
-        val winRate = if(done.isEmpty()) "—" else "${"%.1f".format(Locale.FRANCE, wins * 100.0 / done.size)} %"
-        text("Trades terminés : ${done.size}", 19, ink, true)
-        text("Taux de réussite : $winRate", 17, blue, true)
-        text("Résultat cumulé : ${if(totalR>0) "+" else ""}${"%.2f".format(Locale.FRANCE,totalR)} R", 17, if(totalR>=0) 0xFF12805C.toInt() else 0xFFC33E4C.toInt(), true)
-        text("Nombre total de lignes : ${all.size}", 14, muted, false)
-        button("⬇ Exporter l'historique CSV") { exportCsv(all) }
-        button("🗑 Effacer tout l'historique") {
-            AlertDialog.Builder(this).setTitle("Effacer l'historique ?")
-                .setMessage("Cette action est définitive.")
-                .setNegativeButton("Annuler", null)
-                .setPositiveButton("Effacer") { _, _ -> db.clear(); showStats() }.show()
+        val wins = done.count { it.result == "Gain" }
+        val winRate = if (done.isEmpty()) "—" else "${"%.0f".format(Locale.FRANCE, wins * 100.0 / done.size)} %"
+        
+        text("Résultat cumulé en R", 13, muted, false)
+        text("${if (totalR > 0) "+" else ""}${"%.1f".format(Locale.FRANCE, totalR)} R", 48, ink, true)
+        text("${done.size} trades terminés · Réussite : $winRate", 14, muted, false)
+
+        button("⚡ Enregistrer un trade") { showForm() }
+        button("📊 Voir l'analyse détaillée") { showStats() }
+        
+        text("Derniers trades", 18, ink, true)
+        if (mine.isEmpty()) {
+            text("Aucun trade pour le moment.", 14, muted, false)
+        } else {
+            mine.take(3).forEach { t ->
+                body.addView(TextView(this).apply {
+                    text = "${t.date} · ${t.asset} (${t.dir}) → ${t.result} (${t.r?.let { "$it R" } ?: "—"})"
+                    textSize = 14f; setTextColor(ink); setPadding(0, 6, 0, 6)
+                })
+            }
         }
-        if (all.isEmpty()) text("Aucun trade pour le moment.", 15, muted, false)
-        all.forEach { t ->
+    }
+
+    private fun showHistory() {
+        base("Historique", "Tous les trades du compte")
+        val mine = db.all().filter { it.acct == currentAcct }
+        if (mine.isEmpty()) {
+            text("Aucun trade enregistré.", 15, muted, false)
+            return
+        }
+        mine.forEach { t ->
             val box = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
-                setPadding(12,10,12,10); setBackgroundColor(0xFFFFFFFF.toInt())
+                setPadding(12, 10, 12, 10)
+                setBackgroundColor(0xFFFFFFFF.toInt())
             }
             box.addView(TextView(this).apply {
-                text = "${t.date} · ${t.asset} · ${t.direction}"
-                textSize = 16f; setTextColor(ink); setTypeface(null,Typeface.BOLD)
+                text = "${t.date} · ${t.asset} · ${t.dir} · ${t.strat}"
+                textSize = 15f; setTextColor(ink); setTypeface(null, Typeface.BOLD)
             })
             box.addView(TextView(this).apply {
-                text = "${t.result} · ${t.r?.let { "$it R" } ?: "R non renseigné"} · Risque ${t.risk?.let { "$it%" } ?: "—"}\n${t.setup} · ${t.mode}\n${t.details}"
-                textSize = 13f; setTextColor(muted); setPadding(0,5,0,5)
+                text = "Résultat : ${t.result} (${t.r?.let { "$it R" } ?: "—"}) · Setup : ${t.setup.ifEmpty { "—" }}"
+                textSize = 13f; setTextColor(muted)
             })
             box.addView(Button(this).apply {
-                text = "Supprimer ce trade"
+                text = "Supprimer"
                 setOnClickListener {
                     AlertDialog.Builder(this@MainActivity).setMessage("Supprimer ce trade ?")
-                        .setNegativeButton("Annuler",null)
-                        .setPositiveButton("Supprimer") { _, _ -> db.delete(t.id); showStats() }.show()
+                        .setNegativeButton("Annuler", null)
+                        .setPositiveButton("Supprimer") { _, _ -> db.delete(t.id); showHistory() }.show()
                 }
             })
-            body.addView(box, LinearLayout.LayoutParams(-1,-2).apply { topMargin=6; bottomMargin=6 })
+            body.addView(box, LinearLayout.LayoutParams(-1, -2).apply { topMargin = 6; bottomMargin = 6 })
+        }
+    }
+
+    private fun showForm() {
+        base("Nouveau trade", "Enregistrement rapide")
+        val dateInput = EditText(this).apply { hint = "Date (AAAA-MM-JJ)"; setText(today()); body.addView(this) }
+        val assetInput = EditText(this).apply { hint = "Actif (ex. XAUUSD)"; setText("XAUUSD"); body.addView(this) }
+        val rInput = EditText(this).apply { hint = "Résultat en R (ex. 2.0 ou -1.0)"; body.addView(this) }
+        val setupInput = EditText(this).apply { hint = "Setup principal (ex. FVG, Order Block)"; body.addView(this) }
+        
+        val resSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("En attente", "Gain", "Perte", "Break-even", "Annulé"))
+            body.addView(this)
+        }
+        val dirSpinner = Spinner(this).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("BUY", "SELL"))
+            body.addView(this)
+        }
+
+        button("💾 Enregistrer") {
+            val rVal = rInput.text.toString().trim().replace(',', '.').toDoubleOrNull()
+            db.add(Trade(
+                acct = currentAcct,
+                date = dateInput.text.toString().trim(),
+                asset = assetInput.text.toString().trim().uppercase(),
+                session = "Londres",
+                dir = dirSpinner.selectedItem.toString(),
+                result = resSpinner.selectedItem.toString(),
+                r = rVal,
+                risk = 1.0,
+                setup = setupInput.text.toString().trim()
+            ))
+            Toast.makeText(this, "Trade enregistré avec succès", Toast.LENGTH_SHORT).show()
+            showHome()
+        }
+    }
+
+    private fun showStats() {
+        base("Analyse", "Statistiques du compte ${if (currentAcct == "reel") "Réel" else "Backtest"}")
+        val mine = db.all().filter { it.acct == currentAcct }
+        val done = mine.filter { it.result in listOf("Gain", "Perte", "Break-even") && it.r != null }
+        val wins = done.count { it.result == "Gain" }
+        val totalR = done.sumOf { it.r ?: 0.0 }
+        
+        text("Trades terminés : ${done.size}", 16, ink, true)
+        text("Résultat net : ${if (totalR > 0) "+" else ""}${"%.2f".format(Locale.FRANCE, totalR)} R", 16, ink, true)
+        button("⬇ Exporter en CSV") { exportCsv(mine) }
+    }
+
+    private fun showSettings() {
+        base("Paramètres", "Configuration de l'application")
+        text("Compte actif actuel : ${if (currentAcct == "reel") "Réel" else "Backtest"}", 15, ink, true)
+        button(if (currentAcct == "reel") "Basculer vers Backtest (Violet)" else "Basculer vers Réel (Bleu)") {
+            currentAcct = if (currentAcct == "reel") "backtest" else "reel"
+            showHome()
+        }
+        button("🗑 Supprimer tous les trades de ce compte") {
+            AlertDialog.Builder(this).setTitle("Tout supprimer ?")
+                .setMessage("Tous les trades du compte ${if (currentAcct == "reel") "Réel" else "Backtest"} seront effacés.")
+                .setNegativeButton("Annuler", null)
+                .setPositiveButton("Supprimer") { _, _ -> db.clear(currentAcct); showHome() }.show()
         }
     }
 
     private fun exportCsv(all: List<Trade>) {
         val csv = buildString {
-            appendLine("date,asset,session,direction,result,r,risk,setup,mode,details")
+            appendLine("id,compte,date,asset,direction,result,r,setup")
             all.asReversed().forEach { t ->
-                val fields = listOf(t.date,t.asset,t.session,t.direction,t.result,t.r?.toString() ?: "",t.risk?.toString() ?: "",t.setup,t.mode,t.details)
-                appendLine(fields.joinToString(",") { "\"${it.replace("\"","\"\"")}\"" })
+                appendLine("${t.id},${t.acct},${t.date},${t.asset},${t.dir},${t.result},${t.r ?: ""},\"${t.setup}\"")
             }
         }
         val intent = android.content.Intent(android.content.Intent.ACTION_CREATE_DOCUMENT).apply {
             addCategory(android.content.Intent.CATEGORY_OPENABLE)
             type = "text/csv"
-            putExtra(android.content.Intent.EXTRA_TITLE, "tradelog_export.csv")
+            putExtra(android.content.Intent.EXTRA_TITLE, "jtr_export.csv")
         }
         pendingCsv = csv
         @Suppress("DEPRECATION")
@@ -270,11 +372,12 @@ class MainActivity : Activity() {
     @Deprecated("Use Activity Result APIs")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if(requestCode==1001 && resultCode==RESULT_OK && data?.data!=null) {
+        if (requestCode == 1001 && resultCode == RESULT_OK && data?.data != null) {
             try {
                 contentResolver.openOutputStream(data.data!!)?.bufferedWriter()?.use { it.write(pendingCsv ?: "") }
-                Toast.makeText(this,"CSV exporté",Toast.LENGTH_SHORT).show()
-            } catch(e: Exception) { Toast.makeText(this,"Erreur d'export",Toast.LENGTH_SHORT).show() }
+                Toast.makeText(this, "CSV exporté", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) { Toast.makeText(this, "Erreur d'export", Toast.LENGTH_SHORT).show() }
         }
     }
 }
+ 
