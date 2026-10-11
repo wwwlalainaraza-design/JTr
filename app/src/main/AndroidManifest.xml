@@ -3,7 +3,7 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="JTr"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:theme="@android:style/Theme.Material.NoActionBar"
         android:supportsRtl="true">
         <activity
             android:name=".MainActivity"
