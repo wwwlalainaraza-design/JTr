@@ -78,7 +78,6 @@ class MainActivity : Activity() {
         webView.loadUrl("file:///android_asset/tradelog-maquette.html")
     }
 
-    // Active le mode immersif (cache le haut et le bas, réapparaît au balayage) dès que la fenêtre prend le focus
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
