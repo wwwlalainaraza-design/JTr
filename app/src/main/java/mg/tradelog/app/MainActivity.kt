@@ -5,8 +5,10 @@ import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
@@ -20,6 +22,15 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Rendre la barre d'état totalement transparente (supprime la bande noire en haut)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            window.apply {
+                clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+                addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+                statusBarColor = Color.TRANSPARENT
+            }
+        }
 
         // Le téléphone est-il en mode sombre ?
         val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
@@ -78,6 +89,7 @@ class MainActivity : Activity() {
         webView.loadUrl("file:///android_asset/tradelog-maquette.html")
     }
 
+    // Active le mode immersif par balayage (sticky) pour le haut et le bas
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
         if (hasFocus) {
