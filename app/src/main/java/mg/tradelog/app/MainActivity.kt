@@ -23,18 +23,21 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Le téléphone est-il en mode sombre ?
-        val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-            Configuration.UI_MODE_NIGHT_YES
-
-        // Rendre la barre d'état transparente pour qu'elle adopte la couleur du fond
+        // Rendre la barre d'état totalement transparente et laisser le contenu passer en dessous
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             window.apply {
                 clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
                 addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
-                statusBarColor = if (night) Color.parseColor("#060D1E") else Color.parseColor("#F2F5FB")
+                statusBarColor = Color.TRANSPARENT
+                
+                // Permet au contenu de s'étendre sous la barre transparente
+                decorView.systemUiVisibility = View.SYSTEM_UI_FLAG_LAYOUT_STABLE or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
             }
         }
+
+        // Le téléphone est-il en mode sombre ?
+        val night = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+            Configuration.UI_MODE_NIGHT_YES
 
         val webView = WebView(this).apply {
             settings.javaScriptEnabled = true
