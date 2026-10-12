@@ -142,7 +142,7 @@ function condResults(scope) {
     <p class="note">Une combinaison observée n’est pas une cause, et ne garantit rien pour la suite. Avec peu de trades, ces classements changent beaucoup.</p>`;
 }
 
-/* --- Concepts (combinaisons cochées dans les trades) --- */
+/* --- Concepts --- */
 function conceptStatsHTML(scope) {
   const byKey = (list, keyFn) => { const m = {}; list.forEach(t => keyFn(t).forEach(k => { (m[k] = m[k] || []).push(t); })); return m; };
   const rank = m => Object.entries(m).map(([k, l]) => ({ k, s: calc(l) })).filter(x => x.s.n >= 2).sort((x, y) => y.s.total - x.s.total).slice(0, 10);
@@ -154,12 +154,11 @@ function conceptStatsHTML(scope) {
     const concs = rank(byKey(done, t => t.concepts || []));
     return `<h2 style="color:${st.color}">${st.label}</h2>
       <section class="card"><b>Combinaisons</b>${combos.length ? combos.map(crow).join('') : `<p class="note" style="margin:8px 0 0">Une combinaison apparaît ici dès qu’elle compte au moins 2 trades terminés.</p>`}</section>
-      <section class="card" style="margin-top:10px"><b>Concepts seuls</b>${concs.length ? concs.map(crow).join('') : `<p class="note" style="margin:8px 0 0">Un concept apparaît ici dès qu’il compte au moins 2 trades terminés.</p>`}</section>`;
+      <section class="card" style="margin-top:10px"><b>Concepts seuls</b>${concs.length ? concs.map(crow).join('') : `<p class="note" style="margin:8px 0 0">Un concept apparaît hier dès qu’il compte au moins 2 trades terminés.</p>`}</section>`;
   }).join('');
   return parts + `<p class="note">Chaque méthode est analysée séparément : un concept qui porte le même nom dans deux méthodes (par exemple Order Block) n’est jamais mélangé. Avec peu de trades, ces classements bougent beaucoup.</p>`;
 }
 
-/* --- Écran Analyse --- */
 function renderStats() {
   $('#s-stats').innerHTML = `<h1>Analyse</h1>
     <div class="chips scroll" id="aTop"></div>
@@ -210,7 +209,6 @@ function openFilters() {
     <button class="primary press" style="margin-top:8px" data-act="close">Voir les résultats</button>`);
 }
 
-/* ---------- Paramètres ---------- */
 function tzSessionsHTML() {
   const tzOpts = sel => Array.from({ length: 27 }, (_, i) => i - 12).map(h => `<option value="${h}" ${h === sel ? 'selected' : ''}>${tzName(h)}</option>`).join('');
   return `<section class="card" style="margin-top:14px">
@@ -240,7 +238,7 @@ function renderSettings() {
       <div id="acctSeg" style="margin:10px 0 6px"></div>
       <p class="note" style="margin:6px 0 0">Le réel et le backtest ont chacun leurs trades et leurs statistiques. Tu les reconnais à la couleur : bleu pour le réel, violet pour le backtest.</p>
     </section>
-<section class="card" style="margin-top:14px"><b>Thème</b>
+    <section class="card" style="margin-top:14px"><b>Thème</b>
       <div id="themeSeg" style="margin:10px 0 6px"></div>
       <p class="note" style="margin:6px 0 0">Sombre ou clair, à ton choix. Automatique suit le thème du téléphone quand l’application le permet. Le choix est gardé quand tu fermes l’application.</p>
     </section>
@@ -251,7 +249,6 @@ function renderSettings() {
       <button class="srow press danger" data-act="ask-clear">Supprimer tous les trades (${acct === 'reel' ? 'Réel' : 'Backtest'})</button>
     </section>
     <p class="note">Le thème clair ou sombre suit celui du téléphone.</p>
-    <p class="note">Dans cette maquette, les trades restent en mémoire jusqu'à la fermeture de la page. Dans l'application Android, ils seront gardés dans SQLite.</p>
     <p class="note">Version de l’interface : 10 oct. 2026, 4 fichiers.</p>`;
   seg($('#acctSeg'), [{ v: 'reel', t: 'Réel' }, { v: 'backtest', t: 'Backtest' }], acct, setAcct, v => v === 'reel' ? 'var(--reel)' : 'var(--bt)');
   seg($('#themeSeg'), [{ v: 'auto', t: 'Auto' }, { v: 'light', t: 'Clair' }, { v: 'dark', t: 'Sombre' }], themeMode, setTheme);
@@ -310,10 +307,18 @@ document.addEventListener('click', e => {
     }
     else if (act === 'cancel-edit') { editingId = null; draft = newDraft(draft.strat); renderNew(); }
     else if (act === 'ask-del') confirmSheet('Supprimer ce trade ?', 'Cette action est définitive.', 'Supprimer le trade', 'del:' + arg);
-    else if (act === 'del') { trades = trades.filter(t => t.id !== Number(arg)); closeSheet(); toast('Trade supprimé'); render[current](); }
+    else if (act === 'del') {
+      trades = trades.filter(t => t.id !== Number(arg));
+      saveTrades(); // Persistance suppression
+      closeSheet(); toast('Trade supprimé'); render[current]();
+    }
     else if (act === 'ask-clear') confirmSheet(`Supprimer tous les trades du compte ${acct === 'reel' ? 'Réel' : 'Backtest'} ?`, `${mine().length} trades seront supprimés. L'autre compte n'est pas touché. Cette action est définitive.`, 'Tout supprimer', 'clear');
-    else if (act === 'clear') { trades = trades.filter(t => t.acct !== acct); closeSheet(); toast('Trades supprimés'); render[current](); }
-    else if (act === 'clear-demo') { trades = trades.filter(t => !(t.demo && t.acct === acct)); renderHome(); }
+    else if (act === 'clear') {
+      trades = trades.filter(t => t.acct !== acct);
+      saveTrades(); // Persistance nettoyage compte
+      closeSheet(); toast('Trades supprimés'); render[current]();
+    }
+    else if (act === 'clear-demo') { trades = trades.filter(t => !(t.demo && t.acct === acct)); saveTrades(); renderHome(); }
     else if (act === 'seed') { seedDemo(); toast('Trades d\'exemple rechargés'); renderSettings(); }
     else if (act === 'export') exportCSV();
     else if (act === 'open-filters') openFilters();
@@ -334,15 +339,7 @@ document.addEventListener('click', e => {
 $('#s-new').addEventListener('click', e => {
   const rm = e.target.closest('[data-rmshot]');
   if (rm) { e.stopPropagation(); draft.shots.splice(Number(rm.dataset.rmshot), 1); paintShots(); return; }
-  if (e.target.closest('[data-clear]')) { draft.concepts.clear(); $$('[data-concept]').forEach(b => b.classList.remove('on')); paintCombo(); return; }
-  const c = e.target.closest('[data-concept]');
-  if (c) { const v = c.dataset.concept; draft.concepts.has(v) ? draft.concepts.delete(v) : draft.concepts.add(v); c.classList.toggle('on'); paintCombo(); return; }
-  const dr = e.target.closest('[data-dir]');
-  if (dr) { draft.dir = dr.dataset.dir; $$('.dir', $('#dirs')).forEach(b => b.classList.toggle('on', b.dataset.dir === draft.dir)); return; }
-  const rs = e.target.closest('[data-res]');
-  if (rs) {
-    draft.result = rs.dataset.res;
-    $$('[data-res]').forEach(b => b.classList.toggle('on', b.dataset.res === draft.result));
+  if (e.target.closest('[data-clear]')) { draft.concepts.clear(); $$('[data-concept]').forEach(b => b.classList.remove('on')); paintCombo(); return; }   const c = e.target.closest('[data-concept]');   if (c) { const v = c.dataset.concept; draft.concepts.has(v) ? draft.concepts.delete(v) : draft.concepts.add(v); c.classList.toggle('on'); paintCombo(); return; }   const dr = e.target.closest('[data-dir]');   if (dr) { draft.dir = dr.dataset.dir; $$('.dir', $('#dirs')).forEach(b => b.classList.toggle('on', b.dataset.dir === draft.dir)); return; }   const rs = e.target.closest('[data-res]');   if (rs) {     draft.result = rs.dataset.res;     $$('[data-res]').forEach(b => b.classList.toggle('on', b.dataset.res === draft.result));
     const needs = ['Gain', 'Perte', 'BE'].includes(draft.result), inp = $('#f-r');
     inp.disabled = !needs; if (!needs) { inp.value = ''; draft.r = ''; } else inp.focus();
     clearErrors(); return;
@@ -386,7 +383,6 @@ $('#s-stats').addEventListener('input', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeSheet(); $('#viewer').classList.remove('show'); } });
 
-/* ---------- Démarrage ---------- */
 function setAcct(a) {
   acct = a; document.body.dataset.acct = a;
   editingId = null; draft = newDraft(draft.strat);
