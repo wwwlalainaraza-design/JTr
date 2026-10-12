@@ -138,13 +138,14 @@ function saveTrade() {
     yields: d.yields, news: d.news, newsRes: d.newsRes, mistake: d.mistake, note: d.note.trim() };
   if (editingId != null) { const i = trades.findIndex(x => x.id === editingId); trades[i] = t; }
   else trades.push(t);
+
+  saveTrades(); // Enregistrement automatique dans le localStorage
+
   toast(editingId != null ? 'Modifications enregistrées' : 'Trade enregistré');
   editingId = null; draft = newDraft(d.strat);
   period = 'Tout'; go('home');
 }
 
-/* ---------- Analyse ---------- */
-/* ---------- Analyse des performances ---------- */
 const fmtWR = v => v == null ? '—' : Math.round(v) + ' %';
 const fmtRN = (v, d = 1) => v == null ? 'N/A' : fmtR(v, d) + ' R';
 const fmtExp = v => v == null ? '—' : fmtR(v, 2) + ' R';
@@ -226,7 +227,6 @@ function qualityHTML(scope) {
   return L.length ? `<div class="qbox">${L.map(x => `<div>${x}</div>`).join('')}</div>` : '';
 }
 
-/* --- Résumé --- */
 function summaryHTML(scope) {
   const a = calc(scope), C = 2 * Math.PI * 42, off = C * (1 - a.winRate / 100);
   const kp = [
