@@ -56,3 +56,22 @@ function loadAll() {
     return false;
   }
 }
+/* ---------- Démarrage différé (Anti-ANR) ---------- */
+function applyAccent() { document.body.dataset.accent = acctObj().accent; }
+function setAcct(a) {
+  acct = a; applyAccent(); calYM = null;
+  editingId = null; draft = newDraft(draft.strat);
+  hFilter = { strat: 'Tous', res: 'Tous', tf: 'Tous', dir: 'Tous', day: '' }; period = 'Tout'; F = defaultFilters();
+  go(current);
+}
+// Chargement différé pour libérer le thread principal au démarrage
+setTimeout(function() {
+  loadAll();
+  applyAccent();
+  themeMode = readTheme();
+  applyTheme();
+  window.jtrApplyTheme = applyTheme;
+  go('home');
+  window.__JTR_OK = true;
+  window.__JTR_P5 = true;
+}, 50);
