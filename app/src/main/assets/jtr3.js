@@ -291,3 +291,28 @@ function summaryHTML(scope) {
     <p class="note">Ces chiffres décrivent tes trades passés. Ils ne prédisent pas les résultats à venir, et une corrélation ne prouve pas une cause.</p>`;
 }
 window.__JTR_P3 = true;
+
+document.addEventListener('click', e => {
+  const rs = e.target.closest('[data-res]');
+  if (rs) {
+    draft.result = rs.dataset.res;
+    $$('[data-res]').forEach(b => b.classList.toggle('on', b.dataset.res === draft.result));
+    const needs = ['Gain', 'Perte', 'BE'].includes(draft.result), inp = $('#f-r');
+    
+    // Correctif BE : s'assure que l'input reste actif, vaut '0' et que draft.r est bien initialisé
+    if (draft.result === 'BE') {
+      inp.disabled = false;
+      inp.value = '0';
+      draft.r = '0';
+    } else {
+      inp.disabled = !needs;
+      if (!needs) {
+        inp.value = ''; 
+        draft.r = '';
+      } else {
+        inp.focus();
+      }
+    }
+    clearErrors(); return;
+  }
+});
