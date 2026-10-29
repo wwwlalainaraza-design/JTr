@@ -1,0 +1,26 @@
+JTr — Mise à jour E
+
+Modifications incluses :
+- Barre d'état Android transparente, avec contenu dessiné derrière elle (edge-to-edge). Les icônes changent de contraste selon le thème clair/sombre de JTr. La barre de navigation reste masquée comme avant.
+- Annonces économiques et journal fondamental dans deux sections repliables, sous le calendrier des performances.
+- Annonces affichées en tableau horizontal défilant : annonce/date, réel, prévu, forecast facultatif, importance et interprétation.
+- Importance enregistrée pour chaque annonce (élevée, moyenne, faible) et filtre d'affichage.
+- Effet sur l'or : favorable en vert, défavorable en rouge, neutre transparent, contradictoire transparent avec le libellé « Contradictoire ».
+- Paramètres : copie groupée de plusieurs remarques « À garder à l'œil » vers un compte de destination choisi. Les copies sont indépendantes des originales.
+- Suppression du champ/étiquette de type de compte. Les comptes se distinguent par leur nom. Les anciennes données sont chargées en supprimant l'ancien champ interne type; les noms des comptes et les trades restent conservés.
+
+Fichiers modifiés :
+app/src/main/java/mg/tradelog/app/MainActivity.kt
+app/src/main/assets/jtr1.js
+app/src/main/assets/jtr2.js
+app/src/main/assets/jtr3.js
+app/src/main/assets/jtr4.js
+app/src/main/assets/jtr5.js
+app/src/main/assets/jtr6.js
+app/src/main/assets/tradelog-maquette.html
+tests/tests-maquette.js
+
+Vérifications effectuées :
+- node --check sur tous les fichiers JavaScript : réussi.
+- tests/tests-maquette.js : 194 vérifications réussies, 0 échec.
+- L'APK n'a pas été compilé dans cet environnement et la nouvelle interface n'a pas encore été testée sur un téléphone Android. Il faudra lancer la compilation Android/GitHub Actions puis vérifier le rendu réel, notamment la barre d'état edge-to-edge.
